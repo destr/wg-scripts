@@ -85,10 +85,10 @@ function generate_config() {
 #        echo "$key => ${values[$key]}"
 #        sed -e "'s/$key/${values[$key]}/'"
 #    done
-    
+    local priv_key=$(cat $priv_key_file)
     cat $ROOT_DIR/wg.client.template.conf | sed \
         -e "s#:CLIENT_IP:#$client_ip#" \
-        -e "s#:CLIENT_KEY:#$pub_key#" \
+        -e "s#:CLIENT_KEY:#$priv_key#" \
         -e "s#:SERVER_PUB_KEY:#$SERVER_PUB_KEY#" \
         -e "s#:SERVER_ADDRESS:#$SERVER_ADDRESS#" \
         > $client_dir/wg.$client_name.conf
