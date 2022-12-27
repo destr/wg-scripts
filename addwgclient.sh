@@ -11,6 +11,7 @@ function create_default_rc() {
     echo "WG_CLIENTS_DIR=$HOME/wgclients" >> $rc_file
     echo "SERVER_PUB_KEY=" >> $rc_file
     echo "SERVER_ADDRESS=" >> $rc_file
+    echo "BASE_IP=127.0.0" >> $rc_file
 
 }
 
@@ -51,7 +52,7 @@ function parse_args() {
 function get_client_ip() {
     local count=$(ls -1 $WG_CLIENTS_DIR | wc -l)
     let end_ip=$count+100
-    echo "10.10.12.$end_ip"
+    echo "${BASE_IP}.$end_ip"
 }
 
 function generate_config() {
@@ -92,7 +93,7 @@ function generate_config() {
         -e "s/:SERVER_ADDRESS:/$SERVER_ADDRESS/" \
         > $client_dir/wg.$client_name.conf
 
-    #sudo wg set wg0 peer $pub_key allowed-ips $client_ip/32
+    sudo wg set wg0 peer $pub_key allowed-ips $client_ip/32
     generate_qr $client_name
 }
 
