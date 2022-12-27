@@ -1,5 +1,5 @@
 #!/bin/bash
-#set -x
+set -e
 
 GENERATE_QR_FOR_USER=""
 USERS=()
@@ -87,10 +87,10 @@ function generate_config() {
 #    done
     
     cat $ROOT_DIR/wg.client.template.conf | sed \
-        -e "s/:CLIENT_IP:/$client_ip/" \
-        -e "s/:CLIENT_KEY:/$pub_key/" \
-        -e "s/:SERVER_PUB_KEY:/$SERVER_PUB_KEY/" \
-        -e "s/:SERVER_ADDRESS:/$SERVER_ADDRESS/" \
+        -e "s#:CLIENT_IP:#$client_ip#" \
+        -e "s#:CLIENT_KEY:#$pub_key#" \
+        -e "s#:SERVER_PUB_KEY:#$SERVER_PUB_KEY#" \
+        -e "s#:SERVER_ADDRESS:#$SERVER_ADDRESS#" \
         > $client_dir/wg.$client_name.conf
 
     sudo wg set wg0 peer $pub_key allowed-ips $client_ip/32
