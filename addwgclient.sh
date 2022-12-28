@@ -2,7 +2,11 @@
 set -e
 
 GENERATE_QR_FOR_USER=""
-USERS=()
+CLIENT_NAME=""
+
+FORCE_ADD=false
+DELETE_PEER=""
+DELETE_CONF=""
 
 readonly ROOT_DIR=$(dirname $(readlink -f $0))
 
@@ -17,6 +21,11 @@ function create_default_rc() {
 
 function usage() {
     echo "Usage: $1 <client-name>"
+    echo -e "\t-g <client-name> - Generate QR code"
+    echo -e "\t-a - Add user"
+    echo -e "\t-f - Force add client"
+    echo -e "\t-d - Delete peer"
+    echo -e "\t-D - Delete peer and configuration"
     exit 1
 }
 
@@ -24,7 +33,7 @@ function usage() {
 
 function parse_args() {
     local parsed_args
-    parsed_args=$(getopt -o g: -- "$@")
+    parsed_args=$(getopt -o a:g:d:D:f -- "$@")
     local invalid_args=$?
     if [[ "$invalid_args" != "0" ]];then
         usage
@@ -34,18 +43,22 @@ function parse_args() {
     while true; do
 
         case "$1" in
+            -a) CLIENT_NAME=$2; shift 2;;
             -g) GENERATE_QR_FOR_USER=$2; shift 2 ;;
+            -f) FORCE_ADD=true; shift ;;
+            -d) DELETE_PEER=$2; shift 2;;
+            -D) DELETE_CONF=$2; shift 2;;
             --) shift; break;;
             *) echo "Unknown option: $1"
                 usage;;
         esac
     done
-    USERS=($@)
-    if [[ ${#USERS[@]} -eq 0 ]];then
-        if [[ -z $GENERATE_QR_FOR_USER ]]; then
-            usage
-        fi
-    fi
+#    USERS=($@)
+#    if [[ ${#USERS[@]} -eq 0 ]];then
+#        if [[ -z $GENERATE_QR_FOR_USER ]]; then
+#            usage
+#        fi
+#   fi
 #    echo "Parameters remaining are: $@"
 }
 
@@ -59,10 +72,12 @@ function generate_config() {
     local client_name=$1
     local client_dir=$WG_CLIENTS_DIR/$client_name
 
-#    if [[ -d $client_dir ]];then
-#        echo "Client $client_dir already exists"
-#        exit 3
-#    fi
+    if [[ -d $client_dir ]];then
+        if ! $FORCE_ADD; then
+            echo "Client $client_dir already exists"
+            exit 3
+        fi
+    fi
 
     mkdir -p $client_dir
     local priv_key_file=$client_dir/${client_name}.key
@@ -73,18 +88,6 @@ function generate_config() {
     local priv_key=$(cat $priv_key_file)
     local client_ip=$(get_client_ip)
 
-#    declare -A values
-#    local values
-
-#    values[:CLIENT_IP:]="$client_ip"
-#    values[:CLIENT_KEY:]="$pub_key"
-#    values[:SERVER_PUB_KEY:]="$SERVER_PUB_KEY"
-#    values[:SERVER_ADDRESS:]="$SERVER_ADDRESS"
-
-#    for key in ${!values[@]}; do
-#        echo "$key => ${values[$key]}"
-#        sed -e "'s/$key/${values[$key]}/'"
-#    done
     local priv_key=$(cat $priv_key_file)
     cat $ROOT_DIR/wg.client.template.conf | sed \
         -e "s#:CLIENT_IP:#$client_ip#" \
@@ -104,14 +107,30 @@ function generate_qr() {
     qrencode -r $conf_file -o - -t UTF8
 }
 
+function delete_peer() {
+    local client_name=$1
+    local pub_key_file=$WG_CLIENTS_DIR/${client_name}/${client_name}.key.pub
+    
+    if [[ ! -f $pub_key_file ]];then
+        return 0
+    fi
+    local pub_key=$(cat $pub_key_file)
+    echo "Remove peer $pub_key"
+    sudo wg set wg0 peer $pub_key remove
+}
+
+function delete_conf() {
+    local client_name=$1
+    
+    if [[ -z $client_name ]];then
+        return 0
+    fi
+    rm -rf $WG_CLIENTS_DIR/${client_name}
+}
+
 function main() {
 
     parse_args "$@"
-
-#    for u in ${USERS[@]}; do
-#        echo $u
-#    done
-#    exit 0
 
     local rc_file=$HOME/.wgscriptsrc
     if [[ ! -f $HOME/.wgscriptsrc ]];then
@@ -125,13 +144,27 @@ function main() {
     readonly SERVER_PUB_KEY
     readonly SERVER_ADDRESS
 
+    if [[ -n $DELETE_PEER ]];then
+        delete_peer $DELETE_PEER
+        return 0
+    fi
+
+    if [[ -n $DELETE_CONF ]];then
+        delete_peer $DELETE_CONF
+        delete_conf $DELETE_CONF
+        return 0
+    fi
+
     if [[ -n $GENERATE_QR_FOR_USER ]];then
         generate_qr $GENERATE_QR_FOR_USER
         return 0
     fi
-    for user in ${USERS[@]}; do
-        generate_config $user
-    done
+    if [[ -n $CLIENT_NAME ]];then
+        generate_config $CLIENT_NAME
+        return 0
+    fi
+
+    usage
 
 }
 
