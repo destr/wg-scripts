@@ -7,6 +7,7 @@ CLIENT_NAME=""
 FORCE_ADD=false
 DELETE_PEER=""
 DELETE_CONF=""
+SHOW_CONF=""
 
 readonly ROOT_DIR=$(dirname $(readlink -f $0))
 
@@ -26,14 +27,13 @@ function usage() {
     echo -e "\t-f - Force add client"
     echo -e "\t-d - Delete peer"
     echo -e "\t-D - Delete peer and configuration"
+    echo -e "\t-s - Show config"
     exit 1
 }
 
-
-
 function parse_args() {
     local parsed_args
-    parsed_args=$(getopt -o a:g:d:D:f -- "$@")
+    parsed_args=$(getopt -o a:g:d:D:fs: -- "$@")
     local invalid_args=$?
     if [[ "$invalid_args" != "0" ]];then
         usage
@@ -48,6 +48,7 @@ function parse_args() {
             -f) FORCE_ADD=true; shift ;;
             -d) DELETE_PEER=$2; shift 2;;
             -D) DELETE_CONF=$2; shift 2;;
+            -s) SHOW_CONF=$2; shift 2;;
             --) shift; break;;
             *) echo "Unknown option: $1"
                 usage;;
@@ -104,6 +105,13 @@ function generate_qr() {
     $qr_encode -r $conf_file -o - -t UTF8
 }
 
+function show_config() {
+    local client_name=$1
+    local conf_file=$WG_CLIENTS_DIR/${client_name}/wg.${client_name}.conf
+
+    cat $conf_file
+}
+
 function delete_peer() {
     local client_name=$1
     local pub_key_file=$WG_CLIENTS_DIR/${client_name}/${client_name}.key.pub
@@ -140,6 +148,11 @@ function main() {
     readonly WG_CLIENTS_DIR
     readonly SERVER_PUB_KEY
     readonly SERVER_ADDRESS
+
+    if [[ -n $SHOW_CONF ]];then
+        show_config $SHOW_CONF
+        return 0
+    fi
 
     if [[ -n $DELETE_PEER ]];then
         delete_peer $DELETE_PEER
