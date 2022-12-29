@@ -53,13 +53,6 @@ function parse_args() {
                 usage;;
         esac
     done
-#    USERS=($@)
-#    if [[ ${#USERS[@]} -eq 0 ]];then
-#        if [[ -z $GENERATE_QR_FOR_USER ]]; then
-#            usage
-#        fi
-#   fi
-#    echo "Parameters remaining are: $@"
 }
 
 function get_client_ip() {
@@ -102,9 +95,13 @@ function generate_config() {
 
 function generate_qr() {
     local client_name=$1
-    
+    local qr_encode=/usr/bin/qrencode
     local conf_file=$WG_CLIENTS_DIR/${client_name}/wg.${client_name}.conf
-    qrencode -r $conf_file -o - -t UTF8
+    if [[ ! -x $qr_encode ]];then
+        cat $conf_file
+        return 0
+    fi
+    $qr_encode -r $conf_file -o - -t UTF8
 }
 
 function delete_peer() {
