@@ -28,12 +28,13 @@ function usage() {
     echo -e "\t-d - Delete peer"
     echo -e "\t-D - Delete peer and configuration"
     echo -e "\t-s - Show config"
+    echo -e "\t-h - Show this help"
     exit 1
 }
 
 function parse_args() {
     local parsed_args
-    parsed_args=$(getopt -o a:g:d:D:fs: -- "$@")
+    parsed_args=$(getopt -o a:g:d:D:fhs: -- "$@")
     local invalid_args=$?
     if [[ "$invalid_args" != "0" ]];then
         usage
@@ -49,6 +50,7 @@ function parse_args() {
             -d) DELETE_PEER=$2; shift 2;;
             -D) DELETE_CONF=$2; shift 2;;
             -s) SHOW_CONF=$2; shift 2;;
+            -h) usage ;;
             --) shift; break;;
             *) echo "Unknown option: $1"
                 usage;;
