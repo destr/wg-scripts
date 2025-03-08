@@ -57,9 +57,14 @@ function parse_args() {
 }
 
 function get_client_ip() {
-    local count=$(ls -1 $WG_CLIENTS_DIR | wc -l)
-    let end_ip=$count+100
-    echo "${BASE_IP}.$end_ip"
+    local used=$(find $WG_CLIENTS_DIR -name '*.conf' \
+        -exec sed -n 's/Address.*\.\([0-9]\{3\}\)\/32/\1/p' {} \;)
+
+    local count=$(echo $used | wc -w)
+    ((count+=101))
+    local cons=$(seq 101 $count)
+    local free_ip=$(echo "$used $cons" | tr ' ' '\n' | sort | uniq -u | head -1)
+    echo "${BASE_IP}.$free_ip"
 }
 
 function generate_config() {
